@@ -620,5 +620,3 @@ risk = realtime_injury_monitoring(sensors)
 ---
 
 **프로젝트 완료일**: 2025.12
-**담당자**: 데이터 과학 팀
-**문의**: injury-prediction@example.com
