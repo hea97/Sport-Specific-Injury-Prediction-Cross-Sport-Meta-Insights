@@ -4,6 +4,28 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](#license)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen.svg)](#)
+[![Period](https://img.shields.io/badge/Period-2025.12~-orange.svg)](#)
+
+---
+
+## 기술 스택
+
+**데이터 처리 & 분석**
+- `pandas` (1.3.0+): 데이터 프레임 관리
+- `numpy` (1.21.0+): 수치 계산
+- `scikit-learn` (1.0.0+): 머신러닝 기본 도구
+
+**트리 기반 머신러닝 모델**
+- `xgboost` (1.5.0+): Gradient Boosting
+- `lightgbm` (3.3.0+): Light Gradient Boosting Machine
+- `imbalanced-learn` (0.8.0+): SMOTE (불균형 데이터 처리)
+
+**신경망 & 딥러닝**
+- `torch` (1.10.0+): PyTorch (MLP 구현)
+
+**시각화**
+- `matplotlib` (3.4.0+): 그래프 생성
+- `seaborn` (0.11.0+): 통계 시각화
 
 ---
 
@@ -104,7 +126,7 @@ features = ['Month', 'Days_Missed', 'Load_Score']
 - ✅ 대규모 데이터 → 모델 오버피팅 위험 낮음
 - ✅ 텍스트 기반 → "out", "injured", "missed" 키워드로 라벨 생성
 - ❌ 웨어러블 센서 없음 → Load_Score는 대체 피처
-- ❌ 선수 개인정보 제한 → Age, Position 등 추가 피처 없음
+- ※ 선수 개인정보 제한 → Age, Position 등 추가 피처 없음
 
 ---
 
