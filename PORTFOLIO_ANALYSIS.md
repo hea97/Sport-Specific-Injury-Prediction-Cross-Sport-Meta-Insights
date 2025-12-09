@@ -49,10 +49,103 @@
 - **과제**: 45건만 존재 → 과적합 위험
 
 #### Multimodal 데이터 (sports_multimodal_data.csv)
-- **구성**: 심박수, 피로도, 훈련 강도, 수면 시간, 훈련 기간 (31개 센서)
+
+**기본 정보**
+```
+파일명: sports_multimodal_data.csv
+행 수: 5,430샘플
+컬럼 수: 31개 (웨어러블 센서)
+시간 범위: 실시간 수집 데이터
+부상율: 5% (부상 271명 / 정상 5,159명)
+클래스 불균형: 19:1 (매우 심각한 불균형)
+```
+
+**31개 센서 분류**
+
+1️⃣ **심혈관 지표 (5개)** - 생체 신호
+| 센서명 | 범위 | 의미 |
+|--------|------|------|
+| `heart_rate` | 50~88 bpm | 심박수 (안정 상태) |
+| `respiratory_rate` | 9~23 회/분 | 호흡률 |
+| `spo2` | 96~100% | 산소포화도 |
+| `bp_systolic` | 95~145 mmHg | 수축기 혈압 |
+| `bp_diastolic` | 60~100 mmHg | 이완기 혈압 |
+
+2️⃣ **근골격계 지표 (7개)** - 움직임 분석
+| 센서명 | 의미 | 부상과의 관계 |
+|--------|------|------------|
+| `emg_amplitude` | 근전도 신호 크기 | 근육 피로도 반영 |
+| `acceleration` | 가속도 | 격렬한 운동 감지 |
+| `angular_velocity` | 각속도 | 회전 운동 속도 |
+| `body_orientation` | 신체 방향각 | 자세 분석 |
+| `ground_reaction_force` | 지면반발력 | 착지 충격 (점프, 달리기) |
+| `impact_force` | 충격력 | 부상 위험 신호 |
+| `range_of_motion` | 관절 운동 범위 | 유연성 저하 = 부상 위험 |
+
+3️⃣ **운동 성능 지표 (8개)** - 활동량 측정
+| 센서명 | 예시값 | 해석 |
+|--------|---------|------|
+| `step_count` | 80~120 | 훈련 중 걸음 수 |
+| `cadence` | 61~97 스텝/분 | 보폭 주기 (빠를수록 고강도) |
+| `jump_height` | 0.1~0.8 m | 폭발력 측정 |
+| `gait_symmetry` | 0.6~0.98 | 보행 대칭성 (낮으면 부상 신호) |
+| `speed` | 1~11 m/s | 이동 속도 |
+| `training_duration` | 20~180 분 | 훈련 시간 |
+| `repetition_count` | 18~43 회 | 운동 반복 횟수 |
+| `workload_intensity` | -0.2~10 | 훈련 강도 지수 |
+
+4️⃣ **환경 지표 (6개)** - 외부 조건
+| 센서명 | 범위 | 영향 |
+|--------|------|------|
+| `altitude` | 4~971 m | 고도 훈련 효과 |
+| `ambient_temp` | 5~33°C | 온도 스트레스 |
+| `humidity` | 20~80% | 습도 (고습도 = 피로 가중) |
+| `heat_index` | 9~37°C | 체감 온도 |
+| `acc_rms` | 0.8~1.2 | 가속도 RMS (진동 에너지) |
+| `skin_temp` | 27~35°C | 피부 온도 (과열 감지) |
+
+5️⃣ **피로 & 개인 지표 (5개)**
+| 센서명 | 범위 | 부상 예측 역할 |
+|--------|------|-------------|
+| `fatigue_index` | 35~68 | 🔥 **핵심 피처** - 피로도 직접 측정 |
+| `gsr` | 0.05~0.49 | 피부전도도 (스트레스 반영) |
+| `rest_period` | 4~12시간 | 회복 시간 (부족 = 부상 위험 ↑) |
+| `previous_injury_history` | 0 또는 1 | 과거 부상 여부 |
+| `injury_risk` | 0 또는 1 | **타겟 변수** (1 = 부상 위험) |
+
 - **활용**: 선수 생리 신호 기반 부상 위험 예측
-- **장점**: 실시간 개입 가능, 복잡한 상호작용 포착 가능
-- **과제**: 센서 데이터의 비선형 관계 분석 필요
+- **장점**: 실시간 개입 가능, 31개 센서의 복잡한 상호작용 포착 가능, **경기 중/훈련 중 즉시 감지 가능**
+- **과제**: 센서 데이터의 비선형 관계 분석 필요 → **신경망 필수**
+
+**Multimodal 데이터의 특징**
+
+```python
+# 종목 범위 분석
+# 이 데이터는 특정 스포츠가 아닌 "모든 스포츠"에 적용 가능한 일반 센서 데이터
+# Jump height, cadence, gait symmetry 등이 포함되어 있으므로:
+
+적용 가능 종목:
+✅ 축구 (점프, 보행 대칭성 중요)
+✅ 농구 (jump_height, ground_reaction_force 핵심)
+✅ 달리기 (cadence, gait_symmetry 최우선)
+✅ 테니스 (빠른 방향 전환, impact_force)
+✅ 웨이트 트레이닝 (repetition_count, workload_intensity)
+```
+
+**부상 예측의 핵심 조합 패턴**
+```python
+# 신경망이 자동으로 학습하는 위험 패턴
+if (fatigue_index > 55) and (rest_period < 6) and (workload_intensity > 8):
+    injury_risk = HIGH  # 피로+수면부족+고강도
+
+if (heart_rate < 65) and (gait_symmetry < 0.80) and (speed > 9):
+    injury_risk = HIGH  # 빈혈 증상+보행 불안정+고속
+
+if (gsr > 0.4) and (training_duration > 120) and (previous_injury_history == 1):
+    injury_risk = MODERATE  # 스트레스+과도한 훈련+과거력
+```
+
+---
 
 ---
 
