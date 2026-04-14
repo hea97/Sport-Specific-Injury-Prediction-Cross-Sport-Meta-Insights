@@ -1,0 +1,88 @@
+{
+  "seed": 42,
+  "dataset": {
+    "name": "NBA",
+    "path": "data/injuries_2010-2020.csv",
+    "loader": "nba"
+  },
+  "label": {
+    "target_column": "target",
+    "strategy": "keyword_match",
+    "source_column": "Notes",
+    "positive_keywords": ["out", "missed", "injured"]
+  },
+  "features": {
+    "builder": "nba",
+    "numeric_features": [
+      "Month",
+      "Season_Phase",
+      "Days_Missed_Proxy",
+      "Team_Injury_Burden_7d",
+      "Team_Injury_Burden_30d",
+      "Load_Score"
+    ],
+    "categorical_features": ["Team"]
+  },
+  "models": [
+    {
+      "name": "RF",
+      "type": "random_forest",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 20
+      }
+    },
+    {
+      "name": "XGB",
+      "type": "xgboost",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 8,
+        "learning_rate": 0.1
+      }
+    },
+    {
+      "name": "LGB",
+      "type": "lightgbm",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 10,
+        "learning_rate": 0.1
+      }
+    },
+    {
+      "name": "MLP",
+      "type": "mlp",
+      "hyperparameters": {
+        "hidden_dims": [128, 64, 32],
+        "dropout": 0.3,
+        "learning_rate": 0.001,
+        "epochs": 50,
+        "batch_size": 128
+      }
+    }
+  ],
+  "imbalance": {
+    "smote": true,
+    "k_neighbors": 5
+  },
+  "evaluation": {
+    "test_size": 0.2,
+    "thresholding": {
+      "strategy": "fixed",
+      "threshold": 0.5
+    },
+    "cross_validation": {
+      "enabled": false,
+      "n_splits": 5
+    }
+  },
+  "artifacts": {
+    "results_csv": "results/nba_results.csv",
+    "artifact_dir": "results/artifacts/nba"
+  },
+  "visualization": {
+    "high_risk_x": "workload_intensity",
+    "high_risk_y": "rest_period"
+  }
+}

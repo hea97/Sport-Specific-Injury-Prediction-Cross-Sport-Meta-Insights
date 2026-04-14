@@ -1,0 +1,95 @@
+{
+  "seed": 42,
+  "dataset": {
+    "name": "Football",
+    "path": "data/player_injuries_impact.csv",
+    "loader": "football"
+  },
+  "label": {
+    "target_column": "target",
+    "strategy": "duration_threshold",
+    "start_column": "Date of Injury",
+    "end_column": "Date of return",
+    "min_days": 30
+  },
+  "features": {
+    "builder": "football",
+    "numeric_features": [
+      "Age",
+      "FIFA rating",
+      "Month",
+      "PreInjury_Player_Rating_Mean",
+      "PreInjury_Player_Rating_Std",
+      "PreInjury_GD_AbsMean",
+      "PreInjury_Result_Points_Mean",
+      "Load_Score"
+    ],
+    "categorical_features": [
+      "Position_Group",
+      "Injury_Type",
+      "Team Name"
+    ]
+  },
+  "models": [
+    {
+      "name": "RF",
+      "type": "random_forest",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 20
+      }
+    },
+    {
+      "name": "XGB",
+      "type": "xgboost",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 8,
+        "learning_rate": 0.1
+      }
+    },
+    {
+      "name": "LGB",
+      "type": "lightgbm",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 10,
+        "learning_rate": 0.1
+      }
+    },
+    {
+      "name": "MLP",
+      "type": "mlp",
+      "hyperparameters": {
+        "hidden_dims": [128, 64, 32],
+        "dropout": 0.3,
+        "learning_rate": 0.001,
+        "epochs": 50,
+        "batch_size": 128
+      }
+    }
+  ],
+  "imbalance": {
+    "smote": true,
+    "k_neighbors": 5
+  },
+  "evaluation": {
+    "test_size": 0.2,
+    "thresholding": {
+      "strategy": "fixed",
+      "threshold": 0.5
+    },
+    "cross_validation": {
+      "enabled": false,
+      "n_splits": 5
+    }
+  },
+  "artifacts": {
+    "results_csv": "results/football_results.csv",
+    "artifact_dir": "results/artifacts/football"
+  },
+  "visualization": {
+    "high_risk_x": "workload_intensity",
+    "high_risk_y": "rest_period"
+  }
+}

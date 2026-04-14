@@ -1,88 +1,99 @@
+"""Backward-compatible model wrappers for legacy script usage."""
+
+from __future__ import annotations
+
+import logging
+from typing import Any
+
 import pandas as pd
-import numpy as np
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import classification_report, confusion_matrix, recall_score
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-from imblearn.over_sampling import SMOTE
-from sklearn.model_selection import train_test_split
-import torch
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
-import warnings
-warnings.filterwarnings('ignore')
 
-def train_rf(X_train, X_test, y_train, y_test, sport_name):
-    smote = SMOTE(random_state=42)
-    X_res, y_res = smote.fit_resample(X_train, y_train)
-    model = RandomForestClassifier(n_estimators=300, max_depth=20, random_state=42, n_jobs=-1)
-    model.fit(X_res, y_res)
-    pred = model.predict(X_test)
-    recall = recall_score(y_test, pred)
-    print(f"[{sport_name}] Random Forest Recall: {recall:.4f}")
-    return recall, model
+from src.train.estimators import build_model_pipeline
+from src.train.evaluation import compute_classification_metrics, positive_class_scores
 
-def train_xgb(X_train, X_test, y_train, y_test, sport_name):
-    smote = SMOTE(random_state=42)
-    X_res, y_res = smote.fit_resample(X_train, y_train)
-    model = XGBClassifier(n_estimators=300, max_depth=8, learning_rate=0.1, random_state=42, n_jobs=-1, use_label_encoder=False)
-    model.fit(X_res, y_res)
-    pred = model.predict(X_test)
-    recall = recall_score(y_test, pred)
-    print(f"[{sport_name}] XGBoost Recall: {recall:.4f}")
-    return recall, model
+LOGGER = logging.getLogger(__name__)
 
-def train_lgb(X_train, X_test, y_train, y_test, sport_name):
-    smote = SMOTE(random_state=42)
-    X_res, y_res = smote.fit_resample(X_train, y_train)
-    model = LGBMClassifier(n_estimators=300, max_depth=10, learning_rate=0.1, random_state=42, verbose=-1)
-    model.fit(X_res, y_res)
-    pred = model.predict(X_test)
-    recall = recall_score(y_test, pred)
-    print(f"[{sport_name}] LightGBM Recall: {recall:.4f}")
-    return recall, model
+DEFAULT_SEED = 42
+DEFAULT_MODEL_PARAMS: dict[str, dict[str, Any]] = {
+    "random_forest": {"n_estimators": 300, "max_depth": 20},
+    "xgboost": {"n_estimators": 300, "max_depth": 8, "learning_rate": 0.1},
+    "lightgbm": {"n_estimators": 300, "max_depth": 10, "learning_rate": 0.1},
+    "mlp": {
+        "hidden_dims": (128, 64, 32),
+        "dropout": 0.3,
+        "learning_rate": 0.001,
+        "epochs": 50,
+        "batch_size": 128,
+    },
+}
 
-class InjuryMLP(nn.Module):
-    def __init__(self, input_size):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_size, 128),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Dropout(0.3),
-            nn.Linear(64, 32),
-            nn.ReLU(),
-            nn.Linear(32, 1),
-            nn.Sigmoid()
-        )
-    def forward(self, x):
-        return self.net(x)
 
-def train_mlp(X_train, X_test, y_train, y_test, sport_name):
-    smote = SMOTE(random_state=42)
-    X_res, y_res = smote.fit_resample(X_train, y_train)
-    
-    X_train_t = torch.FloatTensor(X_res.values)
-    X_test_t = torch.FloatTensor(X_test.values)
-    y_train_t = torch.FloatTensor(y_res.values).reshape(-1,1)
-    y_test_t = torch.FloatTensor(y_test.values).reshape(-1,1)
-    
-    model = InjuryMLP(X_train.shape[1])
-    criterion = nn.BCELoss()
-    optimizer = optim.Adam(model.parameters(), lr=0.001)
-    
-    for epoch in range(50):
-        optimizer.zero_grad()
-        out = model(X_train_t)
-        loss = criterion(out, y_train_t)
-        loss.backward()
-        optimizer.step()
-    
-    with torch.no_grad():
-        pred = (model(X_test_t) > 0.5).float()
-        recall = recall_score(y_test, pred.numpy())
-    print(f"[{sport_name}] PyTorch MLP Recall: {recall:.4f}")
-    return recall, model
+def train_rf(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    sport_name: str,
+) -> tuple[float, Any]:
+    """Legacy wrapper for RandomForest training."""
+
+    return _legacy_train("random_forest", X_train, X_test, y_train, y_test, sport_name)
+
+
+def train_xgb(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    sport_name: str,
+) -> tuple[float, Any]:
+    """Legacy wrapper for XGBoost training."""
+
+    return _legacy_train("xgboost", X_train, X_test, y_train, y_test, sport_name)
+
+
+def train_lgb(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    sport_name: str,
+) -> tuple[float, Any]:
+    """Legacy wrapper for LightGBM training."""
+
+    return _legacy_train("lightgbm", X_train, X_test, y_train, y_test, sport_name)
+
+
+def train_mlp(
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    sport_name: str,
+) -> tuple[float, Any]:
+    """Legacy wrapper for PyTorch MLP training."""
+
+    return _legacy_train("mlp", X_train, X_test, y_train, y_test, sport_name)
+
+
+def _legacy_train(
+    model_type: str,
+    X_train: pd.DataFrame,
+    X_test: pd.DataFrame,
+    y_train: pd.Series,
+    y_test: pd.Series,
+    sport_name: str,
+) -> tuple[float, Any]:
+    pipeline = build_model_pipeline(
+        model_type=model_type,
+        model_params=DEFAULT_MODEL_PARAMS[model_type],
+        numeric_features=list(X_train.columns),
+        categorical_features=[],
+        smote_enabled=True,
+        smote_k_neighbors=5,
+        seed=DEFAULT_SEED,
+    )
+    fitted_pipeline = pipeline.fit(X_train, y_train)
+    scores = positive_class_scores(fitted_pipeline, X_test)
+    metrics = compute_classification_metrics(y_test.to_numpy(), scores, threshold=0.5)
+    LOGGER.info("[%s] %s Recall: %.4f", sport_name, model_type, metrics["Recall"])
+    return metrics["Recall"], fitted_pipeline
