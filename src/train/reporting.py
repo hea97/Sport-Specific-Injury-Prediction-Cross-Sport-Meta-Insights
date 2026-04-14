@@ -3,16 +3,39 @@
 from __future__ import annotations
 
 import logging
+import math
 from pathlib import Path
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from matplotlib import colors as mcolors
+from matplotlib import font_manager
+from matplotlib.patches import Patch
+import numpy as np
 
 LOGGER = logging.getLogger(__name__)
+PREFERRED_FONT_FAMILIES = (
+    "Malgun Gothic",
+    "AppleGothic",
+    "NanumGothic",
+    "Noto Sans CJK KR",
+    "DejaVu Sans",
+)
+DATASET_ORDER = ["NBA", "Football", "Multimodal"]
+MODEL_ORDER = ["RF", "XGB", "LGB", "MLP"]
+MODEL_COLORS = {
+    "RF": "#4F5D7A",
+    "XGB": "#3B7080",
+    "LGB": "#4D8B73",
+    "MLP": "#9ABF68",
+}
+_FONT_CONFIGURED = False
 
 
 def refresh_reports(project_root: Path, high_risk_x: str, high_risk_y: str) -> None:
     """Regenerate comparison markdown and insights plots from latest artifacts."""
+
+    _configure_matplotlib_fonts()
 
     results_dir = project_root / "results"
     insights_dir = project_root / "insights"
@@ -77,17 +100,101 @@ def _write_model_comparison(output_path: Path, combined: pd.DataFrame) -> None:
 
 
 def _plot_model_comparison(output_path: Path, combined: pd.DataFrame) -> None:
-    plt.figure(figsize=(11, 6))
-    ordered = combined.sort_values(["Dataset", "Model"]).copy()
-    labels = [f"{dataset}\n{model}" for dataset, model in zip(ordered["Dataset"], ordered["Model"])]
-    plt.bar(labels, ordered["Recall"], color="#3e7cb1", alpha=0.9)
-    plt.title("Multi-Sport Injury Prediction Recall by Dataset and Model")
-    plt.ylabel("Recall")
-    plt.ylim(0, 1.0)
-    plt.xticks(rotation=30, ha="right")
-    plt.tight_layout()
-    plt.savefig(output_path, dpi=300)
-    plt.close()
+    _configure_matplotlib_fonts()
+
+    pivoted, best_models, lower_bound = _prepare_model_comparison(combined)
+    if pivoted.empty:
+        _save_placeholder_plot(
+            output_path,
+            "데이터셋별 모델 Recall 비교",
+            "Run at least one standardized experiment to generate comparison data.",
+        )
+        return
+
+    figure, axis = plt.subplots(figsize=(11.5, 6.8))
+    positions = np.arange(len(pivoted.index), dtype=float)
+    width = 0.18
+    offsets = np.linspace(-1.5 * width, 1.5 * width, num=len(MODEL_ORDER))
+
+    for model_name, offset in zip(MODEL_ORDER, offsets):
+        recalls = pivoted[model_name].to_numpy(dtype=float)
+        bar_positions = positions + offset
+        colors = []
+        edge_colors = []
+        line_widths = []
+        for dataset_name, recall_value in zip(pivoted.index, recalls):
+            if np.isnan(recall_value):
+                colors.append((0.0, 0.0, 0.0, 0.0))
+                edge_colors.append((0.0, 0.0, 0.0, 0.0))
+                line_widths.append(0.0)
+                continue
+
+            is_best_model = best_models.loc[dataset_name] == model_name
+            if is_best_model:
+                colors.append(MODEL_COLORS[model_name])
+                edge_colors.append("#25313D")
+                line_widths.append(1.3)
+            else:
+                colors.append(_blend_with_white(MODEL_COLORS[model_name], blend_ratio=0.72))
+                edge_colors.append(_blend_with_white(MODEL_COLORS[model_name], blend_ratio=0.58))
+                line_widths.append(0.8)
+
+        bars = axis.bar(
+            bar_positions,
+            recalls,
+            width=width,
+            color=colors,
+            edgecolor=edge_colors,
+            linewidth=line_widths,
+            zorder=3,
+        )
+
+        for dataset_name, recall_value, bar in zip(pivoted.index, recalls, bars):
+            if np.isnan(recall_value) or best_models.loc[dataset_name] != model_name:
+                continue
+            axis.text(
+                bar.get_x() + bar.get_width() / 2,
+                recall_value + 0.012,
+                f"{recall_value:.3f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+                fontweight="bold",
+                color="#25313D",
+            )
+
+    axis.set_title("데이터셋별 모델 Recall 비교", fontsize=17, pad=14, fontweight="bold")
+    axis.set_ylabel("Recall", fontsize=11)
+    axis.set_xticks(positions)
+    axis.set_xticklabels(pivoted.index, fontsize=10)
+    axis.set_ylim(lower_bound, 1.0)
+    axis.grid(axis="y", color="#D8DEE6", linewidth=0.9, alpha=0.9, zorder=0)
+    axis.set_axisbelow(True)
+    axis.spines["top"].set_visible(False)
+    axis.spines["right"].set_visible(False)
+
+    legend_handles = [Patch(facecolor=MODEL_COLORS[model_name], edgecolor="none", label=model_name) for model_name in MODEL_ORDER]
+    axis.legend(
+        handles=legend_handles,
+        title="Model",
+        loc="upper left",
+        bbox_to_anchor=(1.01, 1.0),
+        borderaxespad=0.0,
+        frameon=False,
+    )
+
+    figure.text(
+        0.5,
+        0.02,
+        "동일한 모델이라도 데이터셋 구조와 품질에 따라 성능 차이가 크게 나타났다.",
+        ha="center",
+        va="bottom",
+        fontsize=10,
+        color="#475467",
+    )
+    figure.tight_layout(rect=(0.0, 0.06, 0.88, 0.97))
+    figure.savefig(output_path, dpi=300)
+    plt.close(figure)
 
 
 def _plot_nba_feature_importance(project_root: Path, output_path: Path) -> None:
@@ -154,6 +261,7 @@ def _plot_multimodal_risk_zone(
 
 
 def _save_placeholder_plot(output_path: Path, title: str, message: str) -> None:
+    _configure_matplotlib_fonts()
     plt.figure(figsize=(8, 4))
     plt.axis("off")
     plt.title(title)
@@ -161,3 +269,56 @@ def _save_placeholder_plot(output_path: Path, title: str, message: str) -> None:
     plt.tight_layout()
     plt.savefig(output_path, dpi=300)
     plt.close()
+
+
+def _prepare_model_comparison(combined: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, float]:
+    ordered = combined.copy()
+    ordered["Dataset"] = pd.Categorical(ordered["Dataset"], categories=DATASET_ORDER, ordered=True)
+    ordered["Model"] = pd.Categorical(ordered["Model"], categories=MODEL_ORDER, ordered=True)
+    ordered = ordered.sort_values(["Dataset", "Model"]).dropna(subset=["Dataset", "Model"])
+
+    pivoted = ordered.pivot_table(
+        index="Dataset",
+        columns="Model",
+        values="Recall",
+        aggfunc="max",
+        observed=False,
+    )
+    pivoted = pivoted.reindex(DATASET_ORDER).dropna(how="all")
+    pivoted = pivoted.reindex(columns=MODEL_ORDER)
+    if pivoted.empty:
+        return pivoted, pd.Series(dtype="object"), 0.0
+
+    best_models = pivoted.idxmax(axis=1)
+    lower_bound = _comparison_y_axis_lower_bound(pivoted)
+    return pivoted, best_models, lower_bound
+
+
+def _comparison_y_axis_lower_bound(pivoted: pd.DataFrame) -> float:
+    min_recall = float(np.nanmin(pivoted.to_numpy(dtype=float)))
+    if math.isnan(min_recall):
+        return 0.25
+    return 0.25
+
+
+def _blend_with_white(color: str, blend_ratio: float) -> tuple[float, float, float]:
+    red, green, blue = mcolors.to_rgb(color)
+    return (
+        red + (1.0 - red) * blend_ratio,
+        green + (1.0 - green) * blend_ratio,
+        blue + (1.0 - blue) * blend_ratio,
+    )
+
+
+def _configure_matplotlib_fonts() -> None:
+    global _FONT_CONFIGURED
+    if _FONT_CONFIGURED:
+        return
+
+    available_fonts = {font.name for font in font_manager.fontManager.ttflist}
+    for family in PREFERRED_FONT_FAMILIES:
+        if family in available_fonts:
+            plt.rcParams["font.family"] = family
+            break
+    plt.rcParams["axes.unicode_minus"] = False
+    _FONT_CONFIGURED = True
