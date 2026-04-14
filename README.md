@@ -94,6 +94,33 @@ python -m unittest discover -s tests -v
 
 트리 기반 모델은 `joblib`으로 저장되며, PyTorch MLP는 `torch.save`로 저장됩니다.
 
+## 최신 실행 검수 요약
+
+로컬 환경에서 아래 순서로 전체 파이프라인을 다시 실행해 결과를 검증했습니다.
+
+```bash
+python -m src.train.run --config configs/nba.yaml
+python -m src.train.run --config configs/football.yaml
+python -m src.train.run --config configs/multimodal.yaml
+python insights/visualization.py
+```
+
+검수 결과:
+
+- 세 개 데이터셋 설정(`nba`, `football`, `multimodal`)이 모두 정상 완료되었습니다.
+- `results/*.csv`, `results/MODEL_COMPARISON.md`, `insights/*.png`가 최신 결과 기준으로 다시 생성되었습니다.
+- 현재 저장소는 Recall 우선 기준으로 모델을 비교합니다. 따라서 최고 모델은 Recall을 먼저 보고, 동률 또는 근접할 때 보조적으로 다른 지표를 참고합니다.
+
+### 최신 최고 모델 요약
+
+| 데이터셋 | 최고 모델 | Recall | Precision | F1 | PR-AUC |
+| --- | --- | ---: | ---: | ---: | ---: |
+| NBA | RF | 0.9829 | 0.9322 | 0.9569 | 0.9861 |
+| Football | MLP | 0.5577 | 0.5800 | 0.5686 | 0.6488 |
+| Multimodal | MLP | 0.4444 | 0.1364 | 0.2087 | 0.1739 |
+
+이 수치는 현재 로컬에서 재실행한 최신 결과 기준이며, 상세 비교는 `results/MODEL_COMPARISON.md`에서 확인할 수 있습니다.
+
 ## 분석 신뢰성 메모
 
 이번 리팩터링은 기존 코드의 몇 가지 문제를 의도적으로 보완합니다.
