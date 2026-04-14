@@ -1,5 +1,5 @@
-,0
-RF,0.3333333333333333
-XGB,0.24074074074074073
-LGB,0.25925925925925924
-MLP,0.5925925925925926
+Dataset,Model,Recall,Precision,F1,PR_AUC,Threshold,TN,FP,FN,TP,Train_Rows,Test_Rows,Features,SMOTE,Seed,CV_Recall_Mean,CV_Recall_Std,CV_PR_AUC_Mean,Model_Artifact,Predictions_Artifact,Feature_Importance_Artifact
+Multimodal,MLP,0.4444444444444444,0.13636363636363635,0.20869565217391303,0.17391652172316596,0.5,880,152,30,24,4344,1086,9,True,42,,,,results\artifacts\multimodal\models\mlp.pt,results\artifacts\multimodal\predictions\mlp_predictions.csv,
+Multimodal,XGB,0.35185185185185186,0.18095238095238095,0.2389937106918239,0.16205036559100147,0.5,946,86,35,19,4344,1086,9,True,42,,,,results\artifacts\multimodal\models\xgb.joblib,results\artifacts\multimodal\predictions\xgb_predictions.csv,results\artifacts\multimodal\xgb_feature_importance.csv
+Multimodal,RF,0.3333333333333333,0.23076923076923078,0.2727272727272727,0.20502950698162628,0.5,972,60,36,18,4344,1086,9,True,42,,,,results\artifacts\multimodal\models\rf.joblib,results\artifacts\multimodal\predictions\rf_predictions.csv,results\artifacts\multimodal\rf_feature_importance.csv
+Multimodal,LGB,0.3148148148148148,0.16666666666666666,0.21794871794871795,0.16482603243310345,0.5,947,85,37,17,4344,1086,9,True,42,,,,results\artifacts\multimodal\models\lgb.joblib,results\artifacts\multimodal\predictions\lgb_predictions.csv,results\artifacts\multimodal\lgb_feature_importance.csv

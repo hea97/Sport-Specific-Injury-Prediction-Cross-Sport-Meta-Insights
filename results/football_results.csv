@@ -1,5 +1,5 @@
-,0
-RF,0.6078431372549019
-XGB,0.6078431372549019
-LGB,0.5882352941176471
-MLP,0.49019607843137253
+Dataset,Model,Recall,Precision,F1,PR_AUC,Threshold,TN,FP,FN,TP,Train_Rows,Test_Rows,Features,SMOTE,Seed,CV_Recall_Mean,CV_Recall_Std,CV_PR_AUC_Mean,Model_Artifact,Predictions_Artifact,Feature_Importance_Artifact
+Football,MLP,0.5576923076923077,0.58,0.5686274509803921,0.6487540867715057,0.5,41,21,23,29,452,114,11,True,42,,,,results\artifacts\football\models\mlp.pt,results\artifacts\football\predictions\mlp_predictions.csv,
+Football,XGB,0.5,0.5652173913043478,0.5306122448979592,0.5284506658916455,0.5,42,20,26,26,452,114,11,True,42,,,,results\artifacts\football\models\xgb.joblib,results\artifacts\football\predictions\xgb_predictions.csv,results\artifacts\football\xgb_feature_importance.csv
+Football,RF,0.46153846153846156,0.5714285714285714,0.5106382978723404,0.5868800048800759,0.5,44,18,28,24,452,114,11,True,42,,,,results\artifacts\football\models\rf.joblib,results\artifacts\football\predictions\rf_predictions.csv,results\artifacts\football\rf_feature_importance.csv
+Football,LGB,0.4423076923076923,0.5476190476190477,0.48936170212765956,0.5352677671927922,0.5,43,19,29,23,452,114,11,True,42,,,,results\artifacts\football\models\lgb.joblib,results\artifacts\football\predictions\lgb_predictions.csv,results\artifacts\football\lgb_feature_importance.csv
